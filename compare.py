@@ -53,7 +53,7 @@ def main():
     pathfinding_time_bi_a_star = end_time - start_time
     
     if path_a_star and path_bi_a_star:
-        # Calculate metrics for A*
+        #metrics for A*
         total_distance_a_star = sum(heuristic(path_a_star[i], path_a_star[i + 1]) for i in range(len(path_a_star) - 1))
         speed_mps = speed_mph * 1609.34 / 3600
         grid_size_meters = 2000 / maze_size
@@ -63,7 +63,7 @@ def main():
         total_distance_bi_a_star = sum(heuristic(path_bi_a_star[i], path_bi_a_star[i + 1]) for i in range(len(path_bi_a_star) - 1))
         total_time_seconds_bi_a_star = total_distance_bi_a_star * grid_size_meters / speed_mps
         
-        # Print comparison
+        # comparison
         print("\nComparison:")
         print(f"A* Algorithm:")
         print(f"  Path finding time: {pathfinding_time_a_star:.2f} seconds")
@@ -74,7 +74,7 @@ def main():
         print(f"  Total distance: {total_distance_bi_a_star * grid_size_meters:.2f} meters")
         print(f"  Total traversal time: {total_time_seconds_bi_a_star / 60:.2f} minutes")
         
-        print("\nSimulating UAV movement...")
+        print("\nSimulating UAV movement..")
         simulate_uav_2d_comparison(maze, path_a_star, path_bi_a_star, speed_mph)
     else:
         print("No path found for one or both algorithms.")
