@@ -4,9 +4,10 @@ import heapq
 import random
 import time
 
-# Maze generation
-def generate_maze(size=50, num_traps=10, num_rewards=10, num_exits=2):
+# Maze and Terrain Generation
+def generate_maze_and_terrain(size=500):
     maze = np.ones((size, size), dtype=int)
+    terrain = np.random.uniform(low=0, high=10, size=(size, size))  # Random terrain heights between 0 and 10
     stack = [(1, 1)]
     while stack:
         current_cell = stack[-1]
@@ -25,41 +26,13 @@ def generate_maze(size=50, num_traps=10, num_rewards=10, num_exits=2):
         else:
             stack.pop()
     
-    maze[1, 1] = 2  # Start point
-    
-    exits = []
-    while len(exits) < num_exits:
-        exit_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[exit_cell] == 0:
-            maze[exit_cell] = 3  # Exit point
-            exits.append(exit_cell)
-    
-    traps = 0
-    while traps < num_traps:
-        trap_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[trap_cell] == 0:
-            maze[trap_cell] = 4  # Trap
-            traps += 1
-    
-    rewards = 0
-    while rewards < num_rewards:
-        reward_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[reward_cell] == 0:
-            maze[reward_cell] = 5  # Reward
-            rewards += 1
-    
-    return maze
+    maze[1, 1] = 2  
+    maze[-2, -2] = 3 
+    return maze, terrain
 
+# A* Pathfinding Algorithm
 def heuristic(a, b):
     return np.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
-
-def get_cost(maze, node):
-    if maze[node] == 4:  # Trap
-        return 5  # Penalty for traps
-    elif maze[node] == 5:  # Reward
-        return -3  # Bonus for rewards
-    else:
-        return 1  # Normal cost
 
 def get_neighbors(maze, node):
     neighbors = []
@@ -69,16 +42,16 @@ def get_neighbors(maze, node):
             neighbors.append((nx, ny))
     return neighbors
 
-def a_star(maze, start, goals):
+def a_star(maze, start, goal):
     heap = [(0, start)]
     came_from = {}
     g_score = {start: 0}
-    f_score = {start: heuristic(start, goals[0])}
+    f_score = {start: heuristic(start, goal)}
     
     while heap:
         current = heapq.heappop(heap)[1]
         
-        if current in goals:
+        if current == goal:
             path = []
             while current in came_from:
                 path.append(current)
@@ -87,16 +60,17 @@ def a_star(maze, start, goals):
             return path[::-1]
         
         for neighbor in get_neighbors(maze, current):
-            tentative_g_score = g_score[current] + get_cost(maze, neighbor)
+            tentative_g_score = g_score[current] + 1
             
             if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g_score
-                f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goals[0])
+                f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal)
                 heapq.heappush(heap, (f_score[neighbor], neighbor))
     
     return None
 
+# UAV Simulation
 def simulate_uav_2d(maze, path, speed_mph):
     fig, ax = plt.subplots()
     ax.imshow(maze, cmap='viridis')
@@ -113,17 +87,33 @@ def simulate_uav_2d(maze, path, speed_mph):
     plt.ioff()
     plt.show()
 
+# Plot Maze and Terrain Combined
+def plot_maze_and_terrain(maze, terrain, path):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.imshow(terrain, cmap='RdYlGn', interpolation='nearest', alpha=0.6)
+    ax.imshow(maze, cmap='gray', alpha=0.4)
+    
+    if path:
+        path_y, path_x = zip(*path)
+        ax.plot(path_x, path_y, 'b-', linewidth=2, label='Path')
+        ax.plot(path_x, path_y, 'ro', markersize=4)
+
+    plt.colorbar(ax.imshow(terrain, cmap='RdYlGn', interpolation='nearest', alpha=0))
+    plt.title('Maze and Topographical Terrain Map')
+    plt.legend()
+    plt.savefig('images/maze_and_terrain.png')
+
 def main():
     maze_size = 50
-    maze = generate_maze(maze_size, num_traps=20, num_rewards=20, num_exits=2)
+    maze, terrain = generate_maze_and_terrain(maze_size)
     start = (1, 1)
-    goals = [(maze.shape[0] - 2, maze.shape[1] - 2)]
+    goal = (maze.shape[0] - 2, maze.shape[1] - 2)
     
     print("UAV scanning the maze...")
     
     print("UAV calculating optimal path...")
     start_time = time.time()
-    path = a_star(maze, start, goals)
+    path = a_star(maze, start, goal)
     end_time = time.time()
     pathfinding_time = end_time - start_time
     
@@ -142,6 +132,8 @@ def main():
         simulate_uav_2d(maze, path, speed_mph)
     else:
         print("No path found.")
+    
+    plot_maze_and_terrain(maze, terrain, path)
 
 if __name__ == "__main__":
     main()

@@ -4,9 +4,10 @@ import random
 import time
 import heapq
 
-# Maze generation
-def generate_maze(size=50, num_traps=10, num_rewards=10, num_exits=2):
+# Maze and terrain generation
+def generate_maze_and_terrain(size=500):
     maze = np.ones((size, size), dtype=int)
+    terrain = np.random.uniform(low=0, high=10, size=(size, size))  # Random terrain heights between 0 and 10
     stack = [(1, 1)]
     while stack:
         current_cell = stack[-1]
@@ -25,35 +26,16 @@ def generate_maze(size=50, num_traps=10, num_rewards=10, num_exits=2):
         else:
             stack.pop()
     
-    maze[1, 1] = 2  # Start point
+    maze[1, 1] = 2 
+    maze[-2, -2] = 3  
     
-    exits = []
-    while len(exits) < num_exits:
-        exit_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[exit_cell] == 0:
-            maze[exit_cell] = 3  # Exit point
-            exits.append(exit_cell)
-    
-    traps = 0
-    while traps < num_traps:
-        trap_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[trap_cell] == 0:
-            maze[trap_cell] = 4  # Trap
-            traps += 1
-    
-    rewards = 0
-    while rewards < num_rewards:
-        reward_cell = (random.randint(0, size-1), random.randint(0, size-1))
-        if maze[reward_cell] == 0:
-            maze[reward_cell] = 5  # Reward
-            rewards += 1
-    
-    return maze
+    return maze, terrain
 
 # CustomAlgo
-class AstarBin:
-    def __init__(self, maze, start, goal):
+class AstarBiasHeuristic:
+    def __init__(self, maze, terrain, start, goal):
         self.maze = maze
+        self.terrain = terrain
         self.start = start
         self.goal = goal
         self.open_list = []
@@ -64,8 +46,9 @@ class AstarBin:
         self.open_set = {start}
 
     def heuristic(self, a, b):
-        # Manhattan distance
-        return abs(b[0] - a[0]) + abs(b[1] - a[1])
+        dx = abs(b[0] - a[0])
+        dy = abs(b[1] - a[1])
+        return (dx + dy) + (dx - dy) * 0.5  # Bias factor
 
     def get_neighbors(self, node):
         neighbors = []
@@ -76,13 +59,8 @@ class AstarBin:
                 neighbors.append((nx, ny))
         return neighbors
 
-    def get_cost(self, node):
-        if self.maze[node] == 4:  # Trap
-            return 5  # Penalty for traps
-        elif self.maze[node] == 5:  # Reward
-            return -3  # Bonus for rewards
-        else:
-            return 1  # Normal cost
+    def cost(self, from_node, to_node):
+        return self.terrain[to_node] + 1  # Include terrain height in cost
 
     def reconstruct_path(self, current):
         path = [current]
@@ -101,7 +79,7 @@ class AstarBin:
             
             self.open_set.remove(current)
             for neighbor in self.get_neighbors(current):
-                tentative_g_score = self.g_score[current] + self.get_cost(neighbor)
+                tentative_g_score = self.g_score[current] + self.cost(current, neighbor)
                 if neighbor not in self.g_score or tentative_g_score < self.g_score[neighbor]:
                     self.came_from[neighbor] = current
                     self.g_score[neighbor] = tentative_g_score
@@ -111,54 +89,70 @@ class AstarBin:
                         self.open_set.add(neighbor)
                     self.f_score[neighbor] = f_score
         return None
+    
+def plot_maze_and_terrain(maze, terrain, path):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.imshow(terrain, cmap='RdYlGn', interpolation='nearest', alpha=0.6)
+    ax.imshow(maze, cmap='gray', alpha=0.4)
+    
+    if path:
+        path_y, path_x = zip(*path)
+        ax.plot(path_x, path_y, 'b-', linewidth=2, label='Path')
+        ax.plot(path_x, path_y, 'ro', markersize=4)
+
+    plt.colorbar(ax.imshow(terrain, cmap='RdYlGn', interpolation='nearest', alpha=0))
+    plt.title('Maze and Topographical Terrain Map')
+    plt.legend()
+    plt.savefig('images/maze_and_terrain1.png')
 
 def simulate_uav_2d(maze, path, speed_mph):
     fig, ax = plt.subplots()
     ax.imshow(maze, cmap='viridis')
     ax.set_title('2D Maze')
     uav_2d = ax.plot([], [], 'ro', markersize=10)[0]
-
+    
     plt.ion()
     plt.show()
-
+    
     for step in path:
         uav_2d.set_data([step[1]], [step[0]])
         plt.pause(0.1)
-
+    
     plt.ioff()
     plt.show()
 
 def main():
     maze_size = 50
-    maze = generate_maze(maze_size)
+    maze, terrain = generate_maze_and_terrain(maze_size)
     start = (1, 1)
     goal = (maze.shape[0] - 2, maze.shape[1] - 2)
 
     print("UAV scanning the maze...")
 
-    print("UAV calculating optimal path using aStarbin...")
+    print("UAV calculating optimal path using A* with terrain...")
     start_time = time.time()
-    aStarbin = AstarBin(maze, start, goal)
-    path = aStarbin.find_path()
+    astar = AstarBiasHeuristic(maze, terrain, start, goal)
+    path = astar.find_path()
     end_time = time.time()
     pathfinding_time = end_time - start_time
 
     if path:
         print(f"Path found in {pathfinding_time:.2f} seconds! Simulating UAV movement...")
-
-        # Calculate the total distance and time to traverse the path
-        total_distance = sum(AstarBin.heuristic(path[i], path[i + 1]) for i in range(len(path) - 1))
+        
+        total_distance = sum(astar.heuristic(path[i], path[i + 1]) for i in range(len(path) - 1))
         speed_mph = 100
         speed_mps = speed_mph * 1609.34 / 3600  
         grid_size_meters = 1000 / maze_size  
-        total_time_seconds = total_distance * grid_size_meters / speed_mps
-
+        total_time_seconds_t = total_distance * grid_size_meters / speed_mps
+        
         print(f"Total distance: {total_distance * grid_size_meters:.2f} meters")
-        print(f"Total time to traverse path: {total_time_seconds / 60:.2f} minutes")
-
+        print(f"Total time to traverse path: {total_time_seconds_t / 60:.2f} minutes")
+        
         simulate_uav_2d(maze, path, speed_mph)
     else:
         print("No path found.")
+    
+    plot_maze_and_terrain(maze, terrain, path)
 
 if __name__ == "__main__":
     main()
