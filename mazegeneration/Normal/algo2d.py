@@ -86,7 +86,7 @@ def simulate_uav_2d(maze, path, speed_mph):
     plt.show()
 
 def main():
-    maze_size = 500
+    maze_size = 50
     maze = generate_maze(maze_size)
     start = (1, 1)
     goal = (maze.shape[0] - 2, maze.shape[1] - 2)
@@ -102,7 +102,6 @@ def main():
     if path:
         print(f"Path found in {pathfinding_time:.2f} seconds! Simulating UAV movement...")
         
-        # Calculate the total distance and time to traverse the path
         total_distance = sum(heuristic(path[i], path[i + 1]) for i in range(len(path) - 1))
         speed_mph = 100
         speed_mps = speed_mph * 1609.34 / 3600  

@@ -5,7 +5,7 @@ import time
 import heapq
 
 # Maze generation
-def generate_maze(size=500, num_traps=10, num_rewards=10, num_exits=2):
+def generate_maze(size=50, num_traps=10, num_rewards=10, num_exits=2):
     maze = np.ones((size, size), dtype=int)
     stack = [(1, 1)]
     while stack:
@@ -129,7 +129,7 @@ def simulate_uav_2d(maze, path, speed_mph):
     plt.show()
 
 def main():
-    maze_size = 100
+    maze_size = 50
     maze = generate_maze(maze_size)
     start = (1, 1)
     goal = (maze.shape[0] - 2, maze.shape[1] - 2)

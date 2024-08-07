@@ -1,0 +1,18 @@
+Fastest algorithm at each run:
+Run
+1     AstarBiasHeuristic
+2     AstarBiasHeuristic
+3     AstarBiasHeuristic
+4     AstarBiasHeuristic
+5     AstarBiasHeuristic
+6     AstarBiasHeuristic
+7     AstarBiasHeuristic
+8     AstarBiasHeuristic
+9     AstarBiasHeuristic
+10    AstarBiasHeuristic
+
+Overall mean Pathfinding Time for each algorithm (in seconds):
+A*                    1.696202
+AstarBiasHeuristic    1.219659
+
+Overall fastest algorithm: AstarBiasHeuristic by 1.22 seconds

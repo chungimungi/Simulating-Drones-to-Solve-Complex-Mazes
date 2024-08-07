@@ -30,7 +30,7 @@ def generate_maze(size=500):
     return maze
 
 # CustomAlgo
-class AstarBin:
+class AstarBiasHeuristic:
     def __init__(self, maze, start, goal):
         self.maze = maze
         self.start = start
@@ -43,7 +43,10 @@ class AstarBin:
         self.open_set = {start}
 
     def heuristic(self, a, b):
-        return abs(b[0] - a[0]) + abs(b[1] - a[1])  # Manhattan distance
+        # Manhattan distance with a bias towards straight lines
+        dx = abs(b[0] - a[0])
+        dy = abs(b[1] - a[1])
+        return (dx + dy) + (dx - dy) * 0.5  #bias factor
 
     def get_neighbors(self, node):
         neighbors = []
@@ -99,7 +102,7 @@ def simulate_uav_2d(maze, path, speed_mph):
     plt.show()
 
 def main():
-    maze_size = 500
+    maze_size = 50
     maze = generate_maze(maze_size)
     start = (1, 1)
     goal = (maze.shape[0] - 2, maze.shape[1] - 2)
@@ -108,7 +111,7 @@ def main():
 
     print("UAV calculating optimal path using A*...")
     start_time = time.time()
-    astarBin = AstarBin(maze, start, goal)
+    astarBin = AstarBiasHeuristic(maze, start, goal)
     path = astarBin.find_path()
     end_time = time.time()
     pathfinding_time = end_time - start_time
@@ -116,7 +119,6 @@ def main():
     if path:
         print(f"Path found in {pathfinding_time:.2f} seconds! Simulating UAV movement...")
 
-        # Calculate the total distance and time to traverse the path
         total_distance = sum(astarBin.heuristic(path[i], path[i + 1]) for i in range(len(path) - 1))
         speed_mph = 100
         speed_mps = speed_mph * 1609.34 / 3600  
@@ -158,7 +160,7 @@ def main():
     
     print("UAV scanning the maze...")
     
-    print("UAV calculating optimal path using AstarBinBin...")
+    print("UAV calculating optimal path using AstarBiasHeuristic...")
     start_time = time.time()
     AstarBinBin = AstarBinBin(maze, start, goal)
     path = AstarBinBin.find_path()
